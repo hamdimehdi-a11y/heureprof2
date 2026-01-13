@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Class - Pro Timer</title>
+    <style>
+        :root {
+            --bg-color: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920');
+            --nav-bg: rgba(0, 0, 0, 0.95);
+            --text-color: white;
+            --box-bg: white;
+            --box-text: black;
+            --border-color: #2ecc71;
+        }
+
+        body { 
+            margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+            align-items: center; justify-content: flex-start;
+            background: var(--bg-color); background-size: cover; background-position: center; background-attachment: fixed;
+            font-family: 'Segoe UI', Arial, sans-serif; color: var(--text-color); overflow: hidden;
+        }
+
+        nav {
+            width: 100%; background: var(--nav-bg);
+            display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; 
+            padding: 8px 15px; box-sizing: border-box; border-bottom: 2px solid var(--border-color);
+        }
+
+        .nav-center { display: flex; justify-content: center; gap: 8px; }
+        .nav-right { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+
+        .tab { padding: 6px 12px; cursor: pointer; font-size: 13px; font-weight: bold; border-radius: 6px; background: rgba(128, 128, 128, 0.2); }
+        .tab.active { background: var(--border-color); color: white; }
+
+        /* LA CASE DE TEXTE (ENFIN !) */
+        .activity-container {
+            margin-top: 30px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        #activity-input {
+            background: rgba(255, 255, 255, 0.9); /* Fond blanc presque opaque */
+            border: 4px solid var(--border-color);
+            color: black;
+            text-align: center;
+            font-size: 35px;
+            font-weight: bold;
+            padding: 15px;
+            width: 70%;
+            max-width: 800px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            outline: none;
+        }
+
+        .timer-display { font-family: monospace; font-size: 28px; color: #f1c40f; font-weight: bold; }
+        .btn { border: none; padding: 7px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
+        .btn-start { background: #2ecc71; }
+        .btn-pause { background: #f1c40f; color: black; }
+        .btn-stop { background: #e74c3c; }
+
+        #content { display: flex; flex-direction: column; align-items: center; width: 100%; flex-grow: 1; }
+        .section { display: none; flex-direction: column; align-items: center; width: 100%; margin-top: 20px; }
+        .visible { display: flex; }
+
+        #digital-box { background: var(--box-bg); padding: 10px 40px; border-radius: 15px; margin-bottom: 20px; }
+        #digital { font-size: 70px; font-weight: bold; color: var(--box-text); font-family: monospace; }
+
+        #clock-container { position: relative; width: 350px; height: 350px; display: flex; align-items: center; justify-content: center; }
+        svg.timer-svg { position: absolute; transform: rotate(-90deg); width: 400px; height: 400px; z-index: 1; }
+        .circle-bg { fill: none; stroke: rgba(255,255,255,0.2); stroke-width: 15; }
+        .progress-bar { fill: none; stroke: #2ecc71; stroke-width: 15; stroke-dasharray: 1131; stroke-dashoffset: 0; }
+
+        #analog { width: 330px; height: 330px; background: white; border-radius: 50%; position: relative; color: black; z-index: 2; border: 5px solid #333; }
+        .number { position: absolute; width: 100%; height: 100%; text-align: center; font-size: 25px; font-weight: bold; padding: 10px; box-sizing: border-box; }
+        .hand { position: absolute; bottom: 50%; left: 50%; transform-origin: bottom; background: black; transform: translateX(-50%); }
+        .hour { width: 8px; height: 70px; } .min { width: 5px; height: 100px; } .sec { width: 2px; height: 120px; background: red; }
+        
+        #bottom-tools { position: fixed; bottom: 20px; left: 20px; display: flex; gap: 10px; }
+        .tool-btn { width: 50px; height: 50px; cursor: pointer; border-radius: 50%; background: black; color: white; border: 2px solid white; font-size: 20px; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="nav-left">
+            <select id="langSelect" onchange="updateLanguage()" style="padding:5px;">
+                <option value="en-GB">English</option>
+                <option value="fr-FR">Français</option>
+            </select>
+        </div>
+        <div class="nav-center">
+            <div id="t-clock" class="tab" onclick="switchTab('clock', this)">Clock</div>
+            <div id="t-write" class="tab" onclick="switchTab('write', this)">Digital</div>
+            <div id="t-both" class="tab active" onclick="switchTab('both', this)">Both</div>
+        </div>
+        <div class="nav-right">
+            <span id="timer-display" class="timer-display">00:00</span>
+            <input type="number" id="timerInput" value="5" style="width:40px; padding:5px;">
+            <button id="timerBtn" class="btn btn-start" onclick="toggleTimer()">START</button>
+            <button id="pauseBtn" class="btn btn-pause" onclick="pauseTimer()" style="display:none;">PAUSE</button>
+            <button id="stopBtn" class="btn btn-stop" onclick="stopTimer()" style="display:none;">STOP</button>
+        </div>
+    </nav>
+
+    <div class="activity-container">
+        <input type="text" id="activity-input" placeholder="TYPE ACTIVITY NAME HERE">
+    </div>
+
+    <div id="content">
+        <div id="section-write" class="section visible">
+            <div id="digital-box"><div id="digital">00:00:00</div></div>
+        </div>
+        <div id="section-clock" class="section visible">
+            <div id="clock-container">
+                <svg class="timer-svg" viewBox="0 0 400 400">
+                    <circle class="circle-bg" cx="200" cy="200" r="180"></circle>
+                    <circle id="progress" class="progress-bar" cx="200" cy="200" r="180"></circle>
+                </svg>
+                <div id="analog">
+                    <div class="number" style="transform: rotate(30deg);"><span style="display:inline-block; transform: rotate(-30deg);">1</span></div>
+                    <div class="number" style="transform: rotate(60deg);"><span style="display:inline-block; transform: rotate(-60deg);">2</span></div>
+                    <div class="number" style="transform: rotate(90deg);"><span style="display:inline-block; transform: rotate(-90deg);">3</span></div>
+                    <div class="number" style="transform: rotate(120deg);"><span style="display:inline-block; transform: rotate(-120deg);">4</span></div>
+                    <div class="number" style="transform: rotate(150deg);"><span style="display:inline-block; transform: rotate(-150deg);">5</span></div>
+                    <div class="number" style="transform: rotate(180deg);"><span style="display:inline-block; transform: rotate(-180deg);">6</span></div>
+                    <div class="number" style="transform: rotate(210deg);"><span style="display:inline-block; transform: rotate(-210deg);">7</span></div>
+                    <div class="number" style="transform: rotate(240deg);"><span style="display:inline-block; transform: rotate(-240deg);">8</span></div>
+                    <div class="number" style="transform: rotate(270deg);"><span style="display:inline-block; transform: rotate(-270deg);">9</span></div>
+                    <div class="number" style="transform: rotate(300deg);"><span style="display:inline-block; transform: rotate(-300deg);">10</span></div>
+                    <div class="number" style="transform: rotate(330deg);"><span style="display:inline-block; transform: rotate(-330deg);">11</span></div>
+                    <div class="number" style="transform: rotate(0deg);">12</div>
+                    <div id="h-hand" class="hand hour"></div><div id="min-hand" class="hand min"></div><div id="sec-hand" class="hand sec"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="bottom-tools">
+        <button class="tool-btn" onclick="toggleMute()" id="muteBtn">🔊</button>
+        <button class="tool-btn" onclick="toggleFullScreen()">⛶</button>
+    </div>
+
+    <audio id="tictac" loop><source src="https://www.soundjay.com/clock/clock-ticking-4.mp3" type="audio/mpeg"></audio>
+    <audio id="finalAlarm"><source src="https://www.soundjay.com/mechanical/sounds/fire-alarm-1.mp3" type="audio/mpeg"></audio>
+
+    <script>
+        const ticSound = document.getElementById('tictac');
+        const finalSound = document.getElementById('finalAlarm');
+        const progressBar = document.getElementById('progress');
+        let ticTacEnabled = true, isRunning = false, isPaused = false;
+        let timerInterval, timeLeft, totalTime;
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else document.exitFullscreen();
+        }
+
+        function updateLanguage() {
+            const lang = document.getElementById('langSelect').value;
+            document.getElementById('activity-input').placeholder = (lang === 'fr-FR') ? "TAPEZ LE NOM DE L'ACTIVITÉ" : "TYPE ACTIVITY NAME HERE";
+            updateTime();
+        }
+
+        function updateTime() {
+            const now = new Date();
+            const lang = document.getElementById('langSelect').value;
+            document.getElementById('digital').innerText = now.toLocaleTimeString(lang);
+            const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+            document.getElementById('sec-hand').style.transform = `translateX(-50%) rotate(${s * 6}deg)`;
+            document.getElementById('min-hand').style.transform = `translateX(-50%) rotate(${m * 6 + s * 0.1}deg)`;
+            document.getElementById('h-hand').style.transform = `translateX(-50%) rotate(${h * 30 + m * 0.5}deg)`;
+        }
+
+        function toggleTimer() {
+            if (!isRunning) {
+                if (!isPaused) {
+                    totalTime = parseInt(document.getElementById('timerInput').value) * 60;
+                    timeLeft = totalTime;
+                }
+                isRunning = true; isPaused = false;
+                document.getElementById('timerBtn').style.display = "none";
+                document.getElementById('pauseBtn').style.display = "inline-block";
+                document.getElementById('stopBtn').style.display = "inline-block";
+                if (ticTacEnabled) ticSound.play().catch(e => {});
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    let ratio = timeLeft / totalTime;
+                    progressBar.style.strokeDashoffset = 1131 - (ratio * 1131);
+                    let mins = Math.floor(timeLeft / 60), secs = timeLeft % 60;
+                    document.getElementById('timer-display').innerText = `${mins<10?'0':''}${mins}:${secs<10?'0':''}${secs}`;
+                    if (timeLeft <= 0) stopTimer(true);
+                }, 1000);
+            }
+        }
+
+        function pauseTimer() {
+            clearInterval(timerInterval); isRunning = false; isPaused = true;
+            document.getElementById('timerBtn').style.display = "inline-block";
+            document.getElementById('pauseBtn').style.display = "none";
+            ticSound.pause();
+        }
+
+        function stopTimer(finished = false) {
+            clearInterval(timerInterval); isRunning = false; isPaused = false;
+            document.getElementById('timerBtn').style.display = "inline-block";
+            document.getElementById('pauseBtn').style.display = "none";
+            document.getElementById('stopBtn').style.display = "none";
+            document.getElementById('timer-display').innerText = "00:00";
+            progressBar.style.strokeDashoffset = 0;
+            ticSound.pause();
+            if (finished) finalSound.play();
+        }
+
+        function toggleMute() {
+            ticTacEnabled = !ticTacEnabled;
+            document.getElementById('muteBtn').innerText = ticTacEnabled ? "🔊" : "🔇";
+            if (!ticTacEnabled) ticSound.pause(); else if (isRunning) ticSound.play().catch(e=>{});
+        }
+
+        function switchTab(mode, el) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('section-clock').style.display = (mode === 'write') ? 'none' : 'flex';
+            document.getElementById('section-write').style.display = (mode === 'clock') ? 'none' : 'flex';
+        }
+
+        setInterval(updateTime, 1000); updateTime();
+    </script>
+</body>
+</html>
