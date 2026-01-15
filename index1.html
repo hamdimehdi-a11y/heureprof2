@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Class - Pro Timer & Student Wheel</title>
+    <style>
+        :root {
+            --bg-color: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920');
+            --nav-bg: rgba(0, 0, 0, 0.95);
+            --text-color: white;
+            --border-color: #2ecc71;
+        }
+
+        body { 
+            margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+            align-items: center; justify-content: flex-start;
+            background: var(--bg-color); background-size: cover; background-position: center; background-attachment: fixed;
+            font-family: 'Segoe UI', Arial, sans-serif; color: var(--text-color); overflow: hidden;
+        }
+
+        nav {
+            width: 100%; background: var(--nav-bg);
+            display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; 
+            padding: 8px 15px; box-sizing: border-box; border-bottom: 2px solid var(--border-color);
+        }
+
+        .nav-center { display: flex; justify-content: center; gap: 8px; }
+        .nav-right { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+
+        .tab { padding: 6px 12px; cursor: pointer; font-size: 13px; font-weight: bold; border-radius: 6px; background: rgba(128, 128, 128, 0.2); }
+        .tab.active { background: var(--border-color); color: white; }
+
+        .activity-container {
+            margin-top: 15px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #date-display {
+            font-size: 20px;
+            font-weight: 500;
+            background: rgba(0,0,0,0.6);
+            padding: 5px 25px;
+            border-radius: 30px;
+            border: 1px solid var(--border-color);
+        }
+
+        #activity-input {
+            background: rgba(255, 255, 255, 0.95);
+            border: 4px solid var(--border-color);
+            color: black;
+            text-align: center;
+            font-size: 28px;
+            font-weight: bold;
+            padding: 8px;
+            width: 60%;
+            max-width: 600px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            outline: none;
+        }
+
+        /* SECTION ROUE */
+        #section-wheel {
+            position: relative;
+            margin-top: 10px;
+        }
+
+        .wheel-container {
+            position: relative;
+            width: 450px;
+            height: 450px;
+            border: 8px solid white;
+            border-radius: 50%;
+            overflow: hidden;
+            transition: transform 5s cubic-bezier(0.15, 0, 0.15, 1);
+            background: #fff;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        .wheel-pointer {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0; height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 40px solid #e74c3c;
+            z-index: 10;
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5));
+        }
+
+        #canvas-wheel { width: 100%; height: 100%; }
+
+        .spin-btn {
+            margin-top: 15px;
+            padding: 12px 40px;
+            font-size: 22px;
+            background: #e67e22;
+            color: white;
+            border: 3px solid white;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .spin-btn:hover { background: #d35400; transform: scale(1.05); }
+
+        /* TIMER & CLOCK */
+        .timer-display { font-family: monospace; font-size: 28px; color: #f1c40f; font-weight: bold; }
+        .btn { border: none; padding: 7px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
+        .btn-start { background: #2ecc71; }
+        .btn-pause { background: #f1c40f; color: black; }
+        .btn-stop { background: #e74c3c; }
+
+        #content { display: flex; flex-direction: column; align-items: center; width: 100%; flex-grow: 1; }
+        .section { display: none; flex-direction: column; align-items: center; width: 100%; margin-top: 10px;}
+        .visible { display: flex; }
+
+        #clock-container { position: relative; width: 350px; height: 350px; display: flex; align-items: center; justify-content: center; margin-top: 30px;}
+        svg.timer-svg { position: absolute; transform: rotate(-90deg); width: 400px; height: 400px; z-index: 1; }
+        .circle-bg { fill: none; stroke: rgba(255,255,255,0.2); stroke-width: 15; }
+        .progress-bar { fill: none; stroke: #2ecc71; stroke-width: 15; stroke-dasharray: 1131; stroke-dashoffset: 0; }
+
+        #analog { width: 330px; height: 330px; background: white; border-radius: 50%; position: relative; color: black; z-index: 2; border: 5px solid #333; }
+        .number { position: absolute; width: 100%; height: 100%; text-align: center; font-size: 22px; font-weight: bold; padding: 10px; box-sizing: border-box; }
+        .hand { position: absolute; bottom: 50%; left: 50%; transform-origin: bottom; background: black; transform: translateX(-50%); }
+        .hour { width: 8px; height: 70px; } .min { width: 5px; height: 100px; } .sec { width: 2px; height: 120px; background: red; }
+        
+        #bottom-tools { position: fixed; bottom: 20px; left: 20px; display: flex; gap: 10px; }
+        .tool-btn { width: 50px; height: 50px; cursor: pointer; border-radius: 50%; background: black; color: white; border: 2px solid white; font-size: 20px; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="nav-left">
+            <select id="langSelect" onchange="updateLanguage()" style="padding:5px;">
+                <option value="en-GB">English</option>
+                <option value="fr-FR">Français</option>
+            </select>
+        </div>
+        <div class="nav-center">
+            <div id="t-clock" class="tab active" onclick="switchTab('clock', this)">Clock</div>
+            <div id="t-wheel" class="tab" onclick="switchTab('wheel', this)">Wheel</div>
+        </div>
+        <div class="nav-right">
+            <span id="timer-display" class="timer-display">00:00</span>
+            <input type="number" id="timerInput" value="5" style="width:40px; padding:5px;">
+            <button id="timerBtn" class="btn btn-start" onclick="toggleTimer()">START</button>
+            <button id="pauseBtn" class="btn btn-pause" onclick="pauseTimer()" style="display:none;">PAUSE</button>
+            <button id="stopBtn" class="btn btn-stop" onclick="stopTimer()" style="display:none;">STOP</button>
+        </div>
+    </nav>
+
+    <div class="activity-container">
+        <div id="date-display">...</div>
+        <input type="text" id="activity-input" placeholder="TYPE ACTIVITY NAME HERE">
+    </div>
+
+    <div id="content">
+        <div id="section-clock" class="section visible">
+            <div id="clock-container">
+                <svg class="timer-svg" viewBox="0 0 400 400">
+                    <circle class="circle-bg" cx="200" cy="200" r="180"></circle>
+                    <circle id="progress" class="progress-bar" cx="200" cy="200" r="180"></circle>
+                </svg>
+                <div id="analog">
+                    <div class="number" style="transform: rotate(30deg);"><span style="display:inline-block; transform: rotate(-30deg);">1</span></div>
+                    <div class="number" style="transform: rotate(60deg);"><span style="display:inline-block; transform: rotate(-60deg);">2</span></div>
+                    <div class="number" style="transform: rotate(90deg);"><span style="display:inline-block; transform: rotate(-90deg);">3</span></div>
+                    <div class="number" style="transform: rotate(120deg);"><span style="display:inline-block; transform: rotate(-120deg);">4</span></div>
+                    <div class="number" style="transform: rotate(150deg);"><span style="display:inline-block; transform: rotate(-150deg);">5</span></div>
+                    <div class="number" style="transform: rotate(180deg);"><span style="display:inline-block; transform: rotate(-180deg);">6</span></div>
+                    <div class="number" style="transform: rotate(210deg);"><span style="display:inline-block; transform: rotate(-210deg);">7</span></div>
+                    <div class="number" style="transform: rotate(240deg);"><span style="display:inline-block; transform: rotate(-240deg);">8</span></div>
+                    <div class="number" style="transform: rotate(270deg);"><span style="display:inline-block; transform: rotate(-270deg);">9</span></div>
+                    <div class="number" style="transform: rotate(300deg);"><span style="display:inline-block; transform: rotate(-300deg);">10</span></div>
+                    <div class="number" style="transform: rotate(330deg);"><span style="display:inline-block; transform: rotate(-330deg);">11</span></div>
+                    <div class="number" style="transform: rotate(0deg);">12</div>
+                    <div id="h-hand" class="hand hour"></div><div id="min-hand" class="hand min"></div><div id="sec-hand" class="hand sec"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="section-wheel" class="section">
+            <div class="wheel-pointer"></div>
+            <div class="wheel-container" id="wheel-obj">
+                <canvas id="canvas-wheel" width="500" height="500"></canvas>
+            </div>
+            <button class="spin-btn" onclick="spinWheel()">SPIN!</button>
+        </div>
+    </div>
+
+    <div id="bottom-tools">
+        <button class="tool-btn" onclick="toggleMute()" id="muteBtn">🔊</button>
+        <button class="tool-btn" onclick="toggleFullScreen()">⛶</button>
+    </div>
+
+    <audio id="tictac" loop><source src="https://www.soundjay.com/clock/clock-ticking-4.mp3" type="audio/mpeg"></audio>
+    <audio id="finalAlarm"><source src="https://www.soundjay.com/mechanical/sounds/fire-alarm-1.mp3" type="audio/mpeg"></audio>
+
+    <script>
+        const ticSound = document.getElementById('tictac');
+        const finalSound = document.getElementById('finalAlarm');
+        const progressBar = document.getElementById('progress');
+        let ticTacEnabled = true, isRunning = false, isPaused = false;
+        let timerInterval, timeLeft, totalTime;
+
+        // Configuration de la Roue avec vos élèves
+        const students = ["Antonin", "Marley", "Jules", "Jeremy", "Youri", "Romane", "Johan", "Mehdi", "Thomas", "Evan", "Tom", "Leo", "Fabien", "Yovann", "Ethan", "Ilona"];
+        const colors = ["#e74c3c", "#3498db", "#f1c40f", "#2ecc71", "#9b59b6", "#e67e22", "#1abc9c", "#d35400", "#c0392b", "#2980b9", "#27ae60", "#8e44ad", "#f39c12", "#16a085", "#2c3e50", "#7f8c8d"];
+        
+        const canvas = document.getElementById('canvas-wheel');
+        const ctx = canvas.getContext('2d');
+        let currentRotation = 0;
+
+        function drawWheel() {
+            const arc = (2 * Math.PI) / students.length;
+            students.forEach((name, i) => {
+                const angle = i * arc;
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.beginPath();
+                ctx.moveTo(250, 250);
+                ctx.arc(250, 250, 250, angle, angle + arc);
+                ctx.fill();
+                
+                // Texte
+                ctx.save();
+                ctx.translate(250, 250);
+                ctx.rotate(angle + arc / 2);
+                ctx.fillStyle = "white";
+                ctx.font = "bold 16px Arial";
+                ctx.textAlign = "right";
+                ctx.fillText(name, 230, 8);
+                ctx.restore();
+            });
+        }
+
+        function spinWheel() {
+            const extraDeg = Math.floor(Math.random() * 360) + 1800; // 5 tours min
+            currentRotation += extraDeg;
+            document.getElementById('wheel-obj').style.transform = `rotate(${currentRotation}deg)`;
+        }
+
+        function switchTab(mode, el) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('section-clock').style.display = (mode === 'wheel') ? 'none' : 'flex';
+            document.getElementById('section-wheel').style.display = (mode === 'clock') ? 'none' : 'flex';
+        }
+
+        function updateTime() {
+            const now = new Date();
+            const lang = document.getElementById('langSelect').value;
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('date-display').innerText = now.toLocaleDateString(lang, options);
+            const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+            document.getElementById('sec-hand').style.transform = `translateX(-50%) rotate(${s * 6}deg)`;
+            document.getElementById('min-hand').style.transform = `translateX(-50%) rotate(${m * 6 + s * 0.1}deg)`;
+            document.getElementById('h-hand').style.transform = `translateX(-50%) rotate(${h * 30 + m * 0.5}deg)`;
+        }
+
+        function toggleTimer() {
+            if (!isRunning) {
+                if (!isPaused) {
+                    totalTime = parseInt(document.getElementById('timerInput').value) * 60;
+                    timeLeft = totalTime;
+                }
+                isRunning = true; isPaused = false;
+                document.getElementById('timerBtn').style.display = "none";
+                document.getElementById('pauseBtn').style.display = "inline-block";
+                document.getElementById('stopBtn').style.display = "inline-block";
+                if (ticTacEnabled) ticSound.play().catch(e => {});
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    let ratio = timeLeft / totalTime;
+                    progressBar.style.strokeDashoffset = 1131 - (ratio * 1131);
+                    let mins = Math.floor(timeLeft / 60), secs = timeLeft % 60;
+                    document.getElementById('timer-display').innerText = `${mins<10?'0':''}${mins}:${secs<10?'0':''}${secs}`;
+                    if (timeLeft <= 0) stopTimer(true);
+                }, 1000);
+            }
+        }
+
+        function pauseTimer() {
+            clearInterval(timerInterval); isRunning = false; isPaused = true;
+            document.getElementById('timerBtn').style.display = "inline-block";
+            document.getElementById('pauseBtn').style.display = "none";
+            ticSound.pause();
+        }
+
+        function stopTimer(finished = false) {
+            clearInterval(timerInterval); isRunning = false; isPaused = false;
+            document.getElementById('timerBtn').style.display = "inline-block";
+            document.getElementById('pauseBtn').style.display = "none";
+            document.getElementById('stopBtn').style.display = "none";
+            document.getElementById('timer-display').innerText = "00:00";
+            progressBar.style.strokeDashoffset = 0;
+            ticSound.pause();
+            if (finished) finalSound.play();
+        }
+
+        function toggleMute() {
+            ticTacEnabled = !ticTacEnabled;
+            document.getElementById('muteBtn').innerText = ticTacEnabled ? "🔊" : "🔇";
+            if (!ticTacEnabled) ticSound.pause(); else if (isRunning) ticSound.play().catch(e=>{});
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else document.exitFullscreen();
+        }
+
+        function updateLanguage() {
+            const lang = document.getElementById('langSelect').value;
+            document.getElementById('activity-input').placeholder = (lang === 'fr-FR') ? "TAPEZ LE NOM DE L'ACTIVITÉ" : "TYPE ACTIVITY NAME HERE";
+            updateTime();
+        }
+
+        drawWheel();
+        setInterval(updateTime, 1000); 
+        updateTime();
+    </script>
+</body>
+</html>
